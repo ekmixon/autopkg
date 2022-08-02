@@ -48,9 +48,7 @@ NATIVE_EXTRACTORS: Dict[str, ExtractorType] = {
 
 
 def _default_use_python_native_extractor() -> bool:
-    if is_mac():
-        return False
-    return True
+    return not is_mac()
 
 
 class Unarchiver(Processor):

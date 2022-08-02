@@ -49,9 +49,8 @@ except ImportError:
 def writefile(stringdata, path):
     """Writes string data to path."""
     try:
-        fileobject = open(path, mode="w", buffering=1)
-        print(stringdata.encode("UTF-8"), file=fileobject)
-        fileobject.close()
+        with open(path, mode="w", buffering=1) as fileobject:
+            print(stringdata.encode("UTF-8"), file=fileobject)
     except OSError:
         print(f"Couldn't write to {path}", file=fileobject)
 
@@ -82,10 +81,7 @@ def clone_wiki_dir(clone_dir=None):
     cloned. The path can be specified with 'clone_dir', otherwise a
     temporary directory will be used."""
 
-    if not clone_dir:
-        outdir = mkdtemp()
-    else:
-        outdir = clone_dir
+    outdir = clone_dir or mkdtemp()
     run_git(["clone", "https://github.com/autopkg/autopkg.wiki", outdir])
     return os.path.abspath(outdir)
 
@@ -122,7 +118,7 @@ def generate_sidebar(sidebar_path):
 
     # Build the new sidebar
     new_sidebar = ""
-    new_sidebar += "\n".join(current_sidebar_lines[0:processors_start]) + "\n"
+    new_sidebar += "\n".join(current_sidebar_lines[:processors_start]) + "\n"
     new_sidebar += toc_string
     new_sidebar += "\n".join(current_sidebar_lines[processors_end:]) + "\n"
 
@@ -182,9 +178,8 @@ def main(_):
 
     # Generate markdown pages for each processor attributes
     for processor_name in processor_names():
-        if options.processor:
-            if options.processor != processor_name:
-                continue
+        if options.processor and options.processor != processor_name:
+            continue
         processor_class = get_processor(processor_name)
         try:
             description = processor_class.description

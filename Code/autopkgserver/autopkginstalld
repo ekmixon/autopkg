@@ -77,10 +77,6 @@ class RunHandler(socketserver.StreamRequestHandler):
         XUCRED_VERSION = 0
         NGROUPS = 16
         cr_version = 0
-        cr_uid = 1
-        cr_ngroups = 2
-        cr_groups = 3
-
         xucred_fmt = "IIh%dI" % NGROUPS
         res = struct.unpack(
             xucred_fmt,
@@ -89,6 +85,10 @@ class RunHandler(socketserver.StreamRequestHandler):
 
         if res[cr_version] != XUCRED_VERSION:
             raise OSError("Incompatible struct xucred version")
+
+        cr_uid = 1
+        cr_ngroups = 2
+        cr_groups = 3
 
         return res[cr_uid], res[cr_groups : cr_groups + res[cr_ngroups]]
 

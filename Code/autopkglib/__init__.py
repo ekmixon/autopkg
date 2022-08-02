@@ -141,10 +141,7 @@ class Preferences:
         # Path to the preferences file we were given
         self.file_path: Optional[str] = None
         # If we're on macOS, read in the preference domain first.
-        if is_mac():
-            self.prefs = self._get_macos_prefs()
-        else:
-            self.prefs = self._get_file_prefs()
+        self.prefs = self._get_macos_prefs() if is_mac() else self._get_file_prefs()
         if not self.prefs:
             log_err("WARNING: Did not load any default preferences.")
 
@@ -173,7 +170,7 @@ class Preferences:
         value = object
         if isinstance(object, NSNumber):
             value = int(object)
-        elif isinstance(object, NSArray) or isinstance(object, list):
+        elif isinstance(object, (NSArray, list)):
             value = [self.__deepconvert_objc(x) for x in object]
         elif isinstance(object, NSDictionary):
             value = dict(object)
@@ -187,8 +184,7 @@ class Preferences:
 
     def _get_macos_pref(self, key):
         """Get a specific macOS preference key."""
-        value = self.__deepconvert_objc(CFPreferencesCopyAppValue(key, BUNDLE_ID))
-        return value
+        return self.__deepconvert_objc(CFPreferencesCopyAppValue(key, BUNDLE_ID))
 
     def _get_macos_prefs(self):
         """Return a dict (or an empty dict) with the contents of all
@@ -222,12 +218,13 @@ class Preferences:
 
         config_dir = appdirs.user_config_dir(APP_NAME, appauthor=False)
 
-        # Try a plist config, then a json config.
-        data = self._parse_json_or_plist_file(os.path.join(config_dir, "config.plist"))
-        if data:
+        if data := self._parse_json_or_plist_file(
+            os.path.join(config_dir, "config.plist")
+        ):
             return data
-        data = self._parse_json_or_plist_file(os.path.join(config_dir, "config.json"))
-        if data:
+        if data := self._parse_json_or_plist_file(
+            os.path.join(config_dir, "config.json")
+        ):
             return data
 
         return {}
@@ -440,11 +437,7 @@ def update_data(a_dict, key, value):
                 item[index] = do_variable_substitution(item[index])
         elif isinstance(item, (dict, NSDictionary)):
             # Modify a copy of the orginal
-            if isinstance(item, dict):
-                item_copy = item.copy()
-            else:
-                # Need to specify the copy is mutable for NSDictionary
-                item_copy = item.mutableCopy()
+            item_copy = item.copy() if isinstance(item, dict) else item.mutableCopy()
             for key, value in list(item.items()):
                 item_copy[key] = do_variable_substitution(value)
             return item_copy
@@ -479,8 +472,7 @@ def find_binary(binary: str, env: Optional[Dict] = None) -> Optional[str]:
         env = {}
     pref_key = f"{binary.upper()}_PATH"
 
-    bin_env = env.get(pref_key)
-    if bin_env:
+    if bin_env := env.get(pref_key):
         if not is_executable(bin_env):
             log_err(
                 f"WARNING: path given in the '{pref_key}' environment: '{bin_env}' "
@@ -490,8 +482,7 @@ def find_binary(binary: str, env: Optional[Dict] = None) -> Optional[str]:
         else:
             return env[pref_key]
 
-    bin_pref = get_pref(pref_key)
-    if bin_pref:
+    if bin_pref := get_pref(pref_key):
         if not is_executable(bin_pref):
             log_err(
                 f"WARNING: path given in the '{pref_key}' preference: '{bin_pref}' "
@@ -501,11 +492,7 @@ def find_binary(binary: str, env: Optional[Dict] = None) -> Optional[str]:
         else:
             return bin_pref
 
-    if is_windows():
-        extension = ".exe"
-    else:
-        extension = ""
-
+    extension = ".exe" if is_windows() else ""
     full_binary = f"{binary}{extension}"
 
     for search_dir in os.get_exec_path():
@@ -542,14 +529,8 @@ class Processor:
     def __init__(self, env=None, infile=None, outfile=None):
         # super(Processor, self).__init__()
         self.env = env
-        if infile is None:
-            self.infile = sys.stdin
-        else:
-            self.infile = infile
-        if outfile is None:
-            self.outfile = sys.stdout
-        else:
-            self.outfile = outfile
+        self.infile = sys.stdin if infile is None else infile
+        self.outfile = sys.stdout if outfile is None else outfile
 
     def output(self, msg, verbose_level=1):
         """Print a message if verbosity is >= verbose_level"""
@@ -571,8 +552,7 @@ class Processor:
         """Read environment from input plist."""
 
         try:
-            indata = self.infile.buffer.read()
-            if indata:
+            if indata := self.infile.buffer.read():
                 self.env = plistlib.loads(indata)
             else:
                 self.env = {}
@@ -731,7 +711,7 @@ class AutoPackager:
 
         # Set up empty container for final output
         inputs = {}
-        inputs.update(recipe["Input"])
+        inputs |= recipe["Input"]
         inputs.update(cli_values)
         self.env.update(inputs)
         # do any internal string substitutions
@@ -742,15 +722,16 @@ class AutoPackager:
         """Verify a recipe and check for errors."""
 
         # Check for MinimumAutopkgVersion
-        if "MinimumVersion" in list(recipe.keys()):
-            if not version_equal_or_greater(
-                self.env["AUTOPKG_VERSION"], recipe.get("MinimumVersion")
-            ):
-                raise AutoPackagerError(
-                    "Recipe (or a parent recipe) requires at least autopkg "
-                    f"version {recipe.get('MinimumVersion')}, but we are autopkg "
-                    f"version {self.env['AUTOPKG_VERSION']}."
-                )
+        if "MinimumVersion" in list(
+            recipe.keys()
+        ) and not version_equal_or_greater(
+            self.env["AUTOPKG_VERSION"], recipe.get("MinimumVersion")
+        ):
+            raise AutoPackagerError(
+                "Recipe (or a parent recipe) requires at least autopkg "
+                f"version {recipe.get('MinimumVersion')}, but we are autopkg "
+                f"version {self.env['AUTOPKG_VERSION']}."
+            )
 
         # Initialize variable set with input variables.
         variables = set(recipe["Input"].keys())
@@ -797,9 +778,7 @@ class AutoPackager:
         )
         self.env["RECIPE_CACHE_DIR"] = os.path.join(cache_dir, identifier)
 
-        recipe_input_dict = {}
-        for key in list(self.env.keys()):
-            recipe_input_dict[key] = self.env[key]
+        recipe_input_dict = {key: self.env[key] for key in list(self.env.keys())}
         self.results.append({"Recipe input": recipe_input_dict})
 
         # make sure the RECIPE_CACHE_DIR exists, creating it if needed
@@ -827,10 +806,11 @@ class AutoPackager:
             processor = processor_class(self.env)
             processor.inject(step.get("Arguments", {}))
 
-            input_dict = {}
-            for key in list(processor.input_variables.keys()):
-                if key in processor.env:
-                    input_dict[key] = processor.env[key]
+            input_dict = {
+                key: processor.env[key]
+                for key in list(processor.input_variables.keys())
+                if key in processor.env
+            }
 
             if self.verbose > 1:
                 # pretty print any defined input variables
@@ -854,15 +834,12 @@ class AutoPackager:
                     f"Error: {err}"
                 )
 
-            output_dict = {}
-            for key in list(processor.output_variables.keys()):
-                # Safety workaround for Processors that may output
-                # differently-named output variables than are given in
-                # their output_variables
-                # TODO: develop a generic solution for processors that
-                #       can dynamically set their output_variables
-                if processor.env.get(key):
-                    output_dict[key] = self.env[key]
+            output_dict = {
+                key: self.env[key]
+                for key in list(processor.output_variables.keys())
+                if processor.env.get(key)
+            }
+
             if self.verbose > 1:
                 # pretty print output variables
                 pprint.pprint({"Output": output_dict})
@@ -917,9 +894,7 @@ class APLooseVersion(LooseVersion):
                 cmp_result = _cmp(value, other_cmp_version[index])
             except TypeError:
                 # integer is less than character/string
-                if isinstance(value, int):
-                    return -1
-                return 1
+                return -1 if isinstance(value, int) else 1
             else:
                 if cmp_result:
                     return cmp_result
@@ -976,8 +951,9 @@ def import_processors():
     #
     for name in filter(lambda f: f not in ("__init__", "xattr"), processor_files):
         globals()[name] = getattr(
-            __import__(__name__ + "." + name, fromlist=[name]), name
+            __import__(f"{__name__}.{name}", fromlist=[name]), name
         )
+
         _PROCESSOR_NAMES.append(name)
         _CORE_PROCESSOR_NAMES.append(name)
 
@@ -1026,10 +1002,9 @@ def get_processor(processor_name, verbose=None, recipe=None, env=None):
             processor_recipe_id,
         ) = extract_processor_name_with_recipe_identifier(processor_name)
         if processor_recipe_id:
-            shared_processor_recipe_path = find_recipe_by_identifier(
+            if shared_processor_recipe_path := find_recipe_by_identifier(
                 processor_recipe_id, env["RECIPE_SEARCH_DIRS"]
-            )
-            if shared_processor_recipe_path:
+            ):
                 processor_search_dirs.append(
                     os.path.dirname(shared_processor_recipe_path)
                 )
@@ -1043,9 +1018,9 @@ def get_processor(processor_name, verbose=None, recipe=None, env=None):
             processor_search_dirs.extend(parent_recipe_dirs)
 
         # Dedupe the list first
-        deduped_processors = set([dir for dir in processor_search_dirs])
+        deduped_processors = set(list(processor_search_dirs))
         for directory in deduped_processors:
-            processor_filename = os.path.join(directory, processor_name + ".py")
+            processor_filename = os.path.join(directory, f"{processor_name}.py")
             if os.path.exists(processor_filename):
                 try:
                     # attempt to import the module

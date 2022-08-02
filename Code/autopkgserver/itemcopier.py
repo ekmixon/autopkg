@@ -129,8 +129,7 @@ class ItemCopier:
             # remove item if it already exists
             if os.path.exists(full_destpath):
                 self.log.info(f"Removing existing {full_destpath}")
-                retcode = subprocess.call(["/bin/rm", "-rf", full_destpath])
-                if retcode:
+                if retcode := subprocess.call(["/bin/rm", "-rf", full_destpath]):
                     raise ItemCopierError(
                         f"Error removing existing {full_destpath}: {retcode}"
                     )
@@ -140,10 +139,9 @@ class ItemCopier:
             self.socket.send(
                 f"STATUS:Copying {source_itemname} to {full_destpath}\n".encode()
             )
-            retcode = subprocess.call(
+            if retcode := subprocess.call(
                 ["/bin/cp", "-pR", source_itempath, full_destpath]
-            )
-            if retcode:
+            ):
                 raise ItemCopierError(
                     f"Error copying {source_itempath} to {full_destpath}: {retcode}"
                 )
@@ -151,22 +149,25 @@ class ItemCopier:
             # set owner
             user = item.get("user", "root")
             self.log.info(f"Setting owner for '{full_destpath}' to '{user}'")
-            retcode = subprocess.call(["/usr/sbin/chown", "-R", user, full_destpath])
-            if retcode:
+            if retcode := subprocess.call(
+                ["/usr/sbin/chown", "-R", user, full_destpath]
+            ):
                 raise ItemCopierError(f"Error setting owner for {full_destpath}")
 
             # set group
             group = item.get("group", "admin")
             self.log.info(f"Setting group for '{full_destpath}' to '{group}'")
-            retcode = subprocess.call(["/usr/bin/chgrp", "-R", group, full_destpath])
-            if retcode:
+            if retcode := subprocess.call(
+                ["/usr/bin/chgrp", "-R", group, full_destpath]
+            ):
                 raise ItemCopierError(f"Error setting group for {full_destpath}")
 
             # set mode
             mode = item.get("mode", "o-w")
             self.log.info(f"Setting mode for '{full_destpath}' to '{mode}'")
-            retcode = subprocess.call(["/bin/chmod", "-R", mode, full_destpath])
-            if retcode:
+            if retcode := subprocess.call(
+                ["/bin/chmod", "-R", mode, full_destpath]
+            ):
                 raise ItemCopierError(f"Error setting mode for {full_destpath}")
 
             # remove com.apple.quarantine attribute from copied item

@@ -93,23 +93,21 @@ class URLTextSearcher(URLGetter):
 
     def prepare_re_flags(self):
         """Create flag varible for re.compile"""
-        flag_accumulator = 0
-        for flag in self.env.get("re_flags", {}):
-            if flag in re.__dict__:
-                flag_accumulator += re.__dict__[flag]
-        return flag_accumulator
+        return sum(
+            re.__dict__[flag]
+            for flag in self.env.get("re_flags", {})
+            if flag in re.__dict__
+        )
 
     def re_search(self, content):
         """Search for re_pattern in content"""
 
         re_pattern = re.compile(self.env["re_pattern"], flags=self.prepare_re_flags())
-        match = re_pattern.search(content)
-
-        if not match:
+        if match := re_pattern.search(content):
+                # return the last matched group with the dict of named groups
+            return match[(match.lastindex or 0)], match.groupdict()
+        else:
             raise ProcessorError(f"{NO_MATCH_MESSAGE}: {self.env['url']}")
-
-        # return the last matched group with the dict of named groups
-        return (match.group(match.lastindex or 0), match.groupdict())
 
     def main(self):
         output_var_name = self.env["result_output_var_name"]

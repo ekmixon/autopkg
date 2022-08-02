@@ -65,9 +65,8 @@ class BrewCaskInfoProvider(Processor):
         attrs = {}
         regex = r"^\s+(?P<attr>.+) [\'\"](?P<value>.+)[\'\"].*$"
         for line in formula.splitlines():
-            match = re.match(regex, line)
-            if match:
-                attrs[match.group("attr")] = match.group("value")
+            if match := re.match(regex, line):
+                attrs[match["attr"]] = match["value"]
         if not attrs:
             raise ProcessorError("Could not parse formula!")
         return attrs
@@ -79,8 +78,7 @@ class BrewCaskInfoProvider(Processor):
         of '#{version}' within."""
         newattrs = attrs.copy()
         for key, value in list(newattrs.items()):
-            match = re.search("#{(.+?)}", value)
-            if match:
+            if match := re.search("#{(.+?)}", value):
                 subbed_key = match.groups()[0]
                 self.output(f"Substituting value '{subbed_key}' in {key}: '{value}'")
                 newattrs[key] = re.sub(

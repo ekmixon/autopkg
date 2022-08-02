@@ -72,7 +72,7 @@ def call_api(
 
     url = BASE_URL + endpoint
     if query:
-        url += "?" + query
+        url += f"?{query}"
     if data:
         data = json.dumps(data).encode()
 
@@ -89,8 +89,7 @@ def call_api(
     try:
         urlfd = urllib.request.urlopen(req, data=data)
         status = urlfd.getcode()
-        response = urlfd.read()
-        if response:
+        if response := urlfd.read():
             resp_data = json.loads(response)
     except urllib.error.HTTPError as err:
         status = err.code
@@ -187,7 +186,10 @@ def main():
     source_repo_user = repo_components[-2]
     source_repo_name = repo_components[-1]
     print(f"Using source repo: user {source_repo_user}, repo {source_repo_name}")
-    destination_repo_name = opts.destination_repo_name or source_repo_user + "-recipes"
+    destination_repo_name = (
+        opts.destination_repo_name or f"{source_repo_user}-recipes"
+    )
+
     dest_org = opts.destination_org
     print(f"Will clone to {dest_org}/{destination_repo_name}..")
     global TOKEN
@@ -271,7 +273,7 @@ Type 'yes' to proceed: """
 
     # For some reason, the authenticated user automatically gets added
     # to the new team, which is not what we want, so remove the user
-    remove_member_endpoint = "/teams/{}/members/{}".format(new_team["id"], auth_user)
+    remove_member_endpoint = f'/teams/{new_team["id"]}/members/{auth_user}'
     _, code = call_api(remove_member_endpoint, method="DELETE")
     if code != 204:
         print(
@@ -283,9 +285,10 @@ Type 'yes' to proceed: """
     # Add the user to the new team
     # https://developer.github.com/v3/orgs/teams/#add-team-membership
     print(f"Adding {new_team_member} to new team..")
-    user_add_team_endpoint = "/teams/{}/memberships/{}".format(
-        new_team["id"], new_team_member
+    user_add_team_endpoint = (
+        f'/teams/{new_team["id"]}/memberships/{new_team_member}'
     )
+
     # We need to explicitly set a Content-Length of 0, otherwise
     # the API server is expecting us to send data because of PUT
     response, code = call_api(

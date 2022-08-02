@@ -44,14 +44,17 @@ class Symlinker(Processor):
         destination_path = self.env["destination_path"]
 
         # Remove destination if needed.
-        if os.path.exists(destination_path):
-            if "overwrite" in self.env and self.env["overwrite"]:
-                try:
-                    os.unlink(destination_path)
-                except OSError as err:
-                    raise ProcessorError(
-                        f"Can't remove {destination_path}: {err.strerror}"
-                    )
+        if (
+            os.path.exists(destination_path)
+            and "overwrite" in self.env
+            and self.env["overwrite"]
+        ):
+            try:
+                os.unlink(destination_path)
+            except OSError as err:
+                raise ProcessorError(
+                    f"Can't remove {destination_path}: {err.strerror}"
+                )
 
         # Make symlink.
         try:

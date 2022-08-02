@@ -84,24 +84,25 @@ class ChocolateyInstallGenerator:
 
         # When a installer file is embedded, we have to use different install commands.
         if self.file or self.file64:
-            if self.fileType == "zip":
-                splat += "Get-ChocolateyUnzip @packageArgs -Destination $toolsDir\n"
-            else:
-                splat += "Install-ChocolateyInstallPackage @packageArgs\n"
+            splat += (
+                "Get-ChocolateyUnzip @packageArgs -Destination $toolsDir\n"
+                if self.fileType == "zip"
+                else "Install-ChocolateyInstallPackage @packageArgs\n"
+            )
+
+        elif self.fileType == "zip":
+            splat += (
+                "Install-ChocolateyZipPackage @packageArgs -Destination $toolsDir\n"
+            )
         else:
-            if self.fileType == "zip":
-                splat += (
-                    "Install-ChocolateyZipPackage @packageArgs -Destination $toolsDir\n"
-                )
-            else:
-                splat += "Install-ChocolateyPackage @packageArgs\n"
+            splat += "Install-ChocolateyPackage @packageArgs\n"
         splat += "\n"
         out.write(splat)
 
     def _render_field(self, key: str, value: Any, preamble_lines: List[str]) -> str:
         # If a file parameter is used, fix it up to be relative to the computed
         # tools directory _at the time choco install_ runs.
-        if key in ("file", "file64"):
+        if key in {"file", "file64"}:
             preamble_lines.append(
                 f"${key} = Join-Path $toolsDir '{os.path.basename(value)}'"
             )

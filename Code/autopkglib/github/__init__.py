@@ -38,16 +38,12 @@ class GitHubSession(URLGetter):
         self, curl_path=None, curl_opts=None, github_url=None, token_path=TOKEN_LOCATION
     ):
         super(GitHubSession, self).__init__()
-        self.env = {}
-        self.env["url"] = None
+        self.env = {"url": None}
         if curl_path:
             self.env["CURL_PATH"] = curl_path
         if curl_opts:
             self.env["curl_opts"] = curl_opts
-        if github_url:
-            self.url = github_url
-        else:
-            self.url = BASE_URL
+        self.url = github_url or BASE_URL
         self.http_result_code = None
         if token_path.startswith("~"):
             token_abspath = os.path.expanduser(token_path)
@@ -118,8 +114,7 @@ To save the token, paste it to the following prompt."""
             "-",
         ]
 
-        curl_cmd.extend(["-X", method])
-        curl_cmd.extend(["--header", "User-Agent: AutoPkg"])
+        curl_cmd.extend(["-X", method, "--header", "User-Agent: AutoPkg"])
         curl_cmd.extend(["--header", f"Accept: {accept}"])
 
         # Pass the GitHub token as a header
@@ -155,14 +150,12 @@ To save the token, paste it to the following prompt."""
                 f"Curl failure: Could not retrieve URL {self.env['url']}: {curl_err}"
             )
 
-            if retcode == 22:
-                # 22 means any 400 series return code. Note: header seems not to
-                # be dumped to STDOUT for immediate failures. Hence
-                # http_result_code is likely blank/000. Read it from stderr.
-                if re.search(r"URL returned error: [0-9]+", p_stderr):
-                    m = re.match(r".* (?P<status_code>\d+) .*", p_stderr)
-                    if m.group("status_code"):
-                        self.http_result_code = m.group("status_code")
+            if retcode == 22 and re.search(
+                r"URL returned error: [0-9]+", p_stderr
+            ):
+                m = re.match(r".* (?P<status_code>\d+) .*", p_stderr)
+                if m["status_code"]:
+                    self.http_result_code = m["status_code"]
 
         return p_stdout
 
@@ -184,10 +177,7 @@ To save the token, paste it to the following prompt."""
 
         query = f"q={quote(name)}+{exts}+user:{user}"
 
-        if path_only:
-            query += "+in:path,filepath"
-        else:
-            query += "+in:path,file"
+        query += "+in:path,filepath" if path_only else "+in:path,file"
         query += f"&per_page={results_limit}"
 
         results = self.code_search(query, use_token=use_token)
@@ -259,7 +249,7 @@ To save the token, paste it to the following prompt."""
         # Compose the URL
         self.env["url"] = self.url + endpoint
         if query:
-            self.env["url"] += "?" + query
+            self.env["url"] += f"?{query}"
 
         temp_content = tempfile.NamedTemporaryFile().name
         # Prepare curl command
@@ -285,10 +275,12 @@ def print_gh_search_results(results_items):
     if not results_items:
         return
     column_spacer = 4
-    max_name_length = max([len(r["name"]) for r in results_items]) + column_spacer
+    max_name_length = max(len(r["name"]) for r in results_items) + column_spacer
     max_repo_length = (
-        max([len(r["repository"]["name"]) for r in results_items]) + column_spacer
+        max(len(r["repository"]["name"]) for r in results_items)
+        + column_spacer
     )
+
     spacers = (max_name_length, max_repo_length)
 
     print()

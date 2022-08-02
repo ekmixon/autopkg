@@ -59,8 +59,7 @@ def api_call(
         sys.exit(1)
     if results:
         try:
-            parsed = json.loads(results.read())
-            return parsed
+            return json.loads(results.read())
         except BaseException as err:
             print(err, file=sys.stderr)
             raise GitHubAPIError
@@ -86,8 +85,7 @@ def get_repo_list(prefs):
         cmd.extend(["--prefs", prefs])
     result = subprocess.run(cmd, check=False, capture_output=True)
     full_repo_list = result.stdout.strip().splitlines()
-    repo_list = [x.split(b" ")[0].split(b".")[-1].decode() for x in full_repo_list]
-    return repo_list
+    return [x.split(b" ")[0].split(b".")[-1].decode() for x in full_repo_list]
 
 
 def main():

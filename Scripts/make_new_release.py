@@ -81,8 +81,7 @@ def api_call(
         sys.exit(1)
     if results:
         try:
-            parsed = json.loads(results.read())
-            return parsed
+            return json.loads(results.read())
         except BaseException as err:
             print(err, file=sys.stderr)
             raise GitHubAPIError
@@ -208,11 +207,10 @@ def main():
     for rel in published_releases:
         if rel["tag_name"] == tag_name:
             print(
-                "There's already a published release on GitHub with the tag "
-                "{}. It should first be manually removed. "
-                "Release data printed below:".format(tag_name),
+                f"There's already a published release on GitHub with the tag {tag_name}. It should first be manually removed. Release data printed below:",
                 file=sys.stderr,
             )
+
             pprint(rel, stream=sys.stderr)
             sys.exit()
 
@@ -244,7 +242,7 @@ def main():
     match = re.search(notes_rex, new_changelog, re.DOTALL)
     if not match:
         sys.exit("Couldn't extract release notes for this version!")
-    release_notes = match.group("current_ver_notes")
+    release_notes = match["current_ver_notes"]
 
     recipes_dir = tempfile.mkdtemp()
     git_cmd = ["git", "clone"]
@@ -300,12 +298,14 @@ def main():
         pkg_data = fdesc.read()
 
     # prepare release metadata
-    release_data = dict()
-    release_data["tag_name"] = tag_name
-    release_data["target_commitish"] = "master"
-    release_data["name"] = "AutoPkg " + current_version
-    release_data["body"] = release_notes
-    release_data["draft"] = False
+    release_data = {
+        "tag_name": tag_name,
+        "target_commitish": "master",
+        "name": f"AutoPkg {current_version}",
+        "body": release_notes,
+        "draft": False,
+    }
+
     if opts.prerelease:
         release_data["prerelease"] = True
         release_data["name"] += " Beta"
@@ -313,10 +313,11 @@ def main():
     # create the release
     if not opts.dry_run:
         print("** Creating GitHub release")
-        create_release = api_call(
-            f"/repos/{publish_user}/{publish_repo}/releases", token, data=release_data
-        )
-        if create_release:
+        if create_release := api_call(
+            f"/repos/{publish_user}/{publish_repo}/releases",
+            token,
+            data=release_data,
+        ):
             print("Release successfully created. Server response:")
             pprint(create_release)
             print()
@@ -324,18 +325,18 @@ def main():
             print("** Uploading package as release asset")
             # upload the pkg as a release asset
             new_release_id = create_release["id"]
-            endpoint = "/repos/{}/{}/releases/{}/assets?name={}".format(
-                publish_user, publish_repo, new_release_id, pkg_filename
-            )
-            upload_asset = api_call(
+            endpoint = f"/repos/{publish_user}/{publish_repo}/releases/{new_release_id}/assets?name={pkg_filename}"
+
+            if upload_asset := api_call(
                 endpoint,
                 token,
                 baseurl="https://uploads.github.com",
                 data=pkg_data,
                 json_data=False,
-                additional_headers={"Content-Type": "application/octet-stream"},
-            )
-            if upload_asset:
+                additional_headers={
+                    "Content-Type": "application/octet-stream"
+                },
+            ):
                 print("Successfully attached .pkg release asset. Server response:")
                 pprint(upload_asset)
                 print()
@@ -348,11 +349,10 @@ def main():
 
     # increment changelog
     new_changelog = (
-        "### [{}](https://github.com/{}/{}/compare/v{}...HEAD) (Unreleased)\n\n".format(
-            next_version, publish_user, publish_repo, current_version
-        )
+        f"### [{next_version}](https://github.com/{publish_user}/{publish_repo}/compare/v{current_version}...HEAD) (Unreleased)\n\n"
         + new_changelog
     )
+
     with open(changelog_path, "w") as fdesc:
         fdesc.write(new_changelog)
 

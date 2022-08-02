@@ -22,7 +22,6 @@ class TestSearchCmd(unittest.TestCase):
     def setUp(self):
         # Disable preference reading for consistency
         patch("autopkgcmd.opts.globalPreferences").start()
-        pass
 
     def test_no_term(self):
         self.assertEqual(1, search_recipes(["TestSearchCmd", "search"]))

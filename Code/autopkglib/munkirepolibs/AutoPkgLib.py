@@ -46,7 +46,7 @@ class AutoPkgLib:
 
             # add to hash table
             if "installer_item_hash" in item:
-                if not item["installer_item_hash"] in hash_table:
+                if item["installer_item_hash"] not in hash_table:
                     hash_table[item["installer_item_hash"]] = []
                 hash_table[item["installer_item_hash"]].append(itemindex)
 
@@ -77,52 +77,52 @@ class AutoPkgLib:
             # add to table of installed applications
             for install in item.get("installs", []):
                 try:
-                    if install.get("type") in ("application", "bundle"):
-                        if "path" in install:
-                            if "version_comparison_key" in install:
-                                app_version = install[install["version_comparison_key"]]
-                            else:
-                                app_version = install["CFBundleShortVersionString"]
-                            if install["path"] not in app_table:
-                                app_table[install["path"]] = {}
-                            if vers not in app_table[install["path"]]:
-                                app_table[install["path"]][app_version] = []
-                            app_table[install["path"]][app_version].append(itemindex)
-                    if install.get("type") == "file":
-                        if "path" in install:
-                            if "md5checksum" in install:
-                                cksum = install["md5checksum"]
+                    if (
+                        install.get("type") in ("application", "bundle")
+                        and "path" in install
+                    ):
+                        if "version_comparison_key" in install:
+                            app_version = install[install["version_comparison_key"]]
+                        else:
+                            app_version = install["CFBundleShortVersionString"]
+                        if install["path"] not in app_table:
+                            app_table[install["path"]] = {}
+                        if vers not in app_table[install["path"]]:
+                            app_table[install["path"]][app_version] = []
+                        app_table[install["path"]][app_version].append(itemindex)
+                    if install.get("type") == "file" and "path" in install:
+                        if "md5checksum" in install:
+                            cksum = install["md5checksum"]
 
-                                if cksum not in list(checksum_table.keys()):
-                                    checksum_table[cksum] = []
+                            if cksum not in list(checksum_table.keys()):
+                                checksum_table[cksum] = []
 
-                                checksum_table[cksum].append(
-                                    {"path": install["path"], "index": itemindex}
-                                )
-                            else:
-                                path = install["path"]
+                            checksum_table[cksum].append(
+                                {"path": install["path"], "index": itemindex}
+                            )
+                        else:
+                            path = install["path"]
 
-                                if path not in list(files_table.keys()):
-                                    files_table[path] = []
+                            if path not in list(files_table.keys()):
+                                files_table[path] = []
 
-                                files_table[path].append(
-                                    {"path": install["path"], "index": itemindex}
-                                )
+                            files_table[path].append(
+                                {"path": install["path"], "index": itemindex}
+                            )
 
                 except (TypeError, KeyError):
                     # skip this item
                     continue
 
-        pkgdb = {}
-        pkgdb["hashes"] = hash_table
-        pkgdb["receipts"] = pkgid_table
-        pkgdb["applications"] = app_table
-        pkgdb["installer_items"] = installer_item_table
-        pkgdb["checksums"] = checksum_table
-        pkgdb["files"] = files_table
-        pkgdb["items"] = catalogitems
-
-        return pkgdb
+        return {
+            "hashes": hash_table,
+            "receipts": pkgid_table,
+            "applications": app_table,
+            "installer_items": installer_item_table,
+            "checksums": checksum_table,
+            "files": files_table,
+            "items": catalogitems,
+        }
 
     def copy_pkg_to_repo(self, pkginfo, pkg_path):
         """Copies an item to the appropriate place in the repo.

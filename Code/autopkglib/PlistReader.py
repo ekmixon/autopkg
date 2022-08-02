@@ -91,8 +91,7 @@ class PlistReader(DmgMounter):
         ]
 
         for test_bundle in filtered:
-            bundle_path = self.get_bundle_info_path(test_bundle)
-            if bundle_path:
+            if bundle_path := self.get_bundle_info_path(test_bundle):
                 return bundle_path
         return None
 
@@ -135,19 +134,10 @@ class PlistReader(DmgMounter):
             if not os.path.exists(path):
                 raise ProcessorError(f"Path '{path}' doesn't exist!")
 
-            # Is the path a bundle?
-            info_plist_path = self.get_bundle_info_path(path)
-            if info_plist_path:
+            if info_plist_path := self.get_bundle_info_path(path):
                 path = info_plist_path
 
-            # Does it have a 'plist' extension
-            # (naively assuming 'plist' only names, for now)
-            elif path.endswith(".plist"):
-                # Full path to a plist was supplied, move on.
-                pass
-
-            # Might the path contain a bundle at its root?
-            else:
+            elif not path.endswith(".plist"):
                 path = self.find_bundle(path)
 
             # Try to read the plist

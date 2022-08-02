@@ -178,10 +178,7 @@ class Packager:
                 )
                 return True
 
-            if not du_info["GlobalPermissionsEnabled"]:
-                return False
-            else:
-                return True
+            return bool(du_info["GlobalPermissionsEnabled"])
 
         self.log.debug("Verifying packaging request")
         # Check that a disk-based pkgroot isn't somewhere where 'ignore ownerships'
@@ -349,10 +346,7 @@ class Packager:
             # will not join it to the tmp_pkgroot. We need to strip out
             # the leading / to make sure we only touch the pkgroot.
             chownpath = os.path.join(self.tmp_pkgroot, entry["path"].lstrip("/"))
-            if "mode" in list(entry.keys()):
-                chmod_present = True
-            else:
-                chmod_present = False
+            chmod_present = "mode" in list(entry.keys())
             if os.path.isfile(chownpath):
                 os.lchown(chownpath, uid, gid)
                 if chmod_present:

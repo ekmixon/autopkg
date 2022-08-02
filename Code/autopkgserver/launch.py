@@ -206,7 +206,7 @@ def get_launchd_socket_fds():
     """Check in with launchd to get socket file descriptors."""
 
     # Return a dictionary with keys pointing to lists of file descriptors.
-    launchd_socket_fds = dict()
+    launchd_socket_fds = {}
 
     # Callback for dict iterator.
     def add_socket(launch_array, name, context=None):
@@ -214,7 +214,7 @@ def get_launchd_socket_fds():
             raise LaunchDCheckInError(
                 "Could not get file descriptor array: Type mismatch"
             )
-        fds = list()
+        fds = []
         for i in range(launch_data_array_get_count(launch_array)):
             data_fd = launch_data_array_get_index(launch_array, i)
             if launch_data_get_type(data_fd) != LAUNCH_DATA_FD:

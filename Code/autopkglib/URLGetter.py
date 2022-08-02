@@ -133,7 +133,7 @@ class URLGetter(Processor):
         elif responsecode.startswith("55"):
             header["http_result_code"] = "404"
             header["http_result_description"] = line
-        elif responsecode == "150" or responsecode == "125":
+        elif responsecode in ["150", "125"]:
             header["http_result_code"] = "200"
             header["http_result_description"] = line
 
@@ -159,7 +159,7 @@ class URLGetter(Processor):
                 ]:
                     # redirect, so more headers are coming.
                     # Throw away the headers we've received so far
-                    header["http_redirected"] = header.get("location", None)
+                    header["http_redirected"] = header.get("location")
                     self.clear_header(header)
         return header
 
@@ -194,8 +194,7 @@ class URLGetter(Processor):
         curl_cmd = self.prepare_curl_cmd()
         self.add_curl_headers(curl_cmd, headers)
         curl_cmd.append(url)
-        output = self.download_with_curl(curl_cmd, text)
-        return output
+        return self.download_with_curl(curl_cmd, text)
 
     def download_to_file(self, url, filename, headers=None):
         """Download content to a file with default curl options."""

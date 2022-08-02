@@ -177,18 +177,17 @@ class MunkiImporter(Processor):
         pkgdb = repo_library.make_catalog_db()
         # match hashes for the pkg or dmg
         if "installer_item_hash" in pkginfo:
-            matchingindexes = pkgdb["hashes"].get(pkginfo["installer_item_hash"])
-            if matchingindexes:
+            if matchingindexes := pkgdb["hashes"].get(
+                pkginfo["installer_item_hash"]
+            ):
                 # we have an item with the exact same checksum hash in the repo
                 return pkgdb["items"][matchingindexes[0]]
 
-        # try to match against installed applications
-        applist = [
+        if applist := [
             item
             for item in pkginfo.get("installs", [])
             if item.get("type") in ("application", "bundle") and "path" in item
-        ]
-        if applist:
+        ]:
             matching_indexes = []
             for app in applist:
                 app_path = app["path"]
@@ -196,20 +195,21 @@ class MunkiImporter(Processor):
                     app_version = app[app["version_comparison_key"]]
                 else:
                     app_version = app["CFBundleShortVersionString"]
-                match = pkgdb["applications"].get(app_path, {}).get(app_version)
-                if not match:
+                if (
+                    match := pkgdb["applications"]
+                    .get(app_path, {})
+                    .get(app_version)
+                ):
+                    matching_indexes = (
+                        matching_indexes.intersection(set(match))
+                        if matching_indexes
+                        else set(match)
+                    )
+
+                else:
                     # no entry for app['path'] and app['version']
                     # no point in continuing
                     return None
-                else:
-                    if not matching_indexes:
-                        # store the array of matching item indexes
-                        matching_indexes = set(match)
-                    else:
-                        # we're only interested in items that match
-                        # all applications
-                        matching_indexes = matching_indexes.intersection(set(match))
-
             # did we find any matches?
             if matching_indexes:
                 return pkgdb["items"][list(matching_indexes)[0]]
@@ -220,31 +220,26 @@ class MunkiImporter(Processor):
             pkgid = item.get("packageid")
             vers = item.get("version")
             if pkgid and vers:
-                match = pkgdb["receipts"].get(pkgid, {}).get(vers)
-                if not match:
+                if match := pkgdb["receipts"].get(pkgid, {}).get(vers):
+                    matching_indexes = (
+                        matching_indexes.intersection(set(match))
+                        if matching_indexes
+                        else set(match)
+                    )
+
+                else:
                     # no entry for pkgid and vers
                     # no point in continuing
                     return None
-                else:
-                    if not matching_indexes:
-                        # store the array of matching item indexes
-                        matching_indexes = set(match)
-                    else:
-                        # we're only interested in items that match
-                        # all receipts
-                        matching_indexes = matching_indexes.intersection(set(match))
-
         # did we find any matches?
         if matching_indexes:
             return pkgdb["items"][list(matching_indexes)[0]]
 
-        # try to match against install md5checksums
-        filelist = [
+        if filelist := [
             item
             for item in pkginfo.get("installs", [])
             if item["type"] == "file" and "path" in item and "md5checksum" in item
-        ]
-        if filelist:
+        ]:
             for fileitem in filelist:
                 cksum = fileitem["md5checksum"]
                 if cksum in pkgdb["checksums"]:
@@ -258,22 +253,19 @@ class MunkiImporter(Processor):
 
                             return matching_pkg
 
-        # Try to match against a simple list of files and paths
-        # where our pkginfo version also matches
-        path_only_filelist = [
+        if path_only_filelist := [
             item
             for item in pkginfo.get("installs", [])
             if item.get("type") == "file"
             and "path" in item
             and "md5checksum" not in item
-        ]
-        if path_only_filelist:
+        ]:
             for pathitem in path_only_filelist:
                 path = pathitem["path"]
                 if path in pkgdb["files"]:
                     path_matches = pkgdb["files"][path]
                     for path_match in path_matches:
-                        if path_match["path"] == pathitem["path"]:
+                        if path_match["path"] == path:
                             matching_pkg = pkgdb["items"][path_match["index"]]
                             # make sure we do this only for items that also
                             # match our pkginfo version

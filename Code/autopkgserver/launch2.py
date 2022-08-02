@@ -41,14 +41,15 @@ def launch_activate_socket(name):
     try:
         fds = POINTER(c_int)()
         cnt = c_size_t(0)
-        err = libc.launch_activate_socket(name.encode(), byref(fds), byref(cnt))
-        if err:
+        if err := libc.launch_activate_socket(
+            name.encode(), byref(fds), byref(cnt)
+        ):
             raise LaunchDError(
                 f"Failed to retrieve sockets from launchd: {os.strerror(err)}"
             )
 
         # Return a list of file descriptors.
-        return list(fds[x] for x in range(cnt.value))
+        return [fds[x] for x in range(cnt.value)]
 
     finally:
         if fds:

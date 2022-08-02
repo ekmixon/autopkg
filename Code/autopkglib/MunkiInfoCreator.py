@@ -72,9 +72,12 @@ class MunkiInfoCreator(Processor):
 
             # Generate arguments for makepkginfo.
             args = ["/usr/local/munki/makepkginfo"]
-            for option in munkiopts:
-                if option in self.env:
-                    args.append(f"--{option}={self.env[option]}")
+            args.extend(
+                f"--{option}={self.env[option]}"
+                for option in munkiopts
+                if option in self.env
+            )
+
             args.append(pkg_for_makepkginfo)
 
             # Call makepkginfo.
@@ -93,7 +96,6 @@ class MunkiInfoCreator(Processor):
                     f"creating pkginfo for {self.env['pkg_path']} failed: {stderr.decode()}"
                 )
 
-        # makepkginfo cleanup.
         finally:
             if temp_path is not None:
                 shutil.rmtree(temp_path)

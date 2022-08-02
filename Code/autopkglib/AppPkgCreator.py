@@ -138,7 +138,7 @@ class AppPkgCreator(DmgMounter, PkgCreator):
                 f"{os.path.splitext(os.path.basename(app_path))[0]}-"
                 f"{self.env['version']}"
             )
-            pkg_path = os.path.join(pkgdir, pkgname + ".pkg")
+            pkg_path = os.path.join(pkgdir, f"{pkgname}.pkg")
 
         # Check for an existing flat package in the output dir and compare
         # its identifier and version to the one we're going to build.

@@ -286,16 +286,16 @@ class ChocolateyPackager(Processor):
         return self._build_path(build_dir, "tools", "chocolateyInstall.ps1")
 
     def nuspec_definition(self) -> NuspecGenerator:
-        def_args: Dict[str, Any] = {}
-        for k in self.nuspec_variables.keys():
-            if k not in self.env:
-                continue
-            if k == "dependencies":
-                def_args[k] = list(
-                    map(lambda dep_args: NuspecDependency(**dep_args), self.env[k])
-                )
-            else:
-                def_args[k] = self.env[k]
+        def_args: Dict[str, Any] = {
+            k: list(
+                map(lambda dep_args: NuspecDependency(**dep_args), self.env[k])
+            )
+            if k == "dependencies"
+            else self.env[k]
+            for k in self.nuspec_variables.keys()
+            if k in self.env
+        }
+
         return NuspecGenerator(**def_args)
 
     def chocolateyinstall_ps1(self) -> ChocolateyInstallGenerator:
@@ -328,7 +328,7 @@ class ChocolateyPackager(Processor):
         else:
             installer_kwargs["file"] = self.env["installer_path"]
 
-        assert len(installer_kwargs) > 0, "Processor experienced a fatal logic error."
+        assert installer_kwargs, "Processor experienced a fatal logic error."
 
         return ChocolateyInstallGenerator(
             packageName=self.env["id"],

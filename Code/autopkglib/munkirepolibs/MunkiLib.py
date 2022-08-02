@@ -61,11 +61,9 @@ class MunkiLib:
         return None
 
     def extract_and_copy_icon_to_repo(self, pkg_path, pkginfo, import_multiple=True):
-        uploaded_path = self.munkiimportlib.extract_and_copy_icon(
+        if uploaded_path := self.munkiimportlib.extract_and_copy_icon(
             self.repo, pkg_path, pkginfo, import_multiple
-        )
-
-        if uploaded_path:
+        ):
             return self._full_path(uploaded_path)
 
         return None

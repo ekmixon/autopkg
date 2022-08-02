@@ -136,7 +136,7 @@ class DmgCreator(Processor):
             dmg_format,
         ]
         if dmg_format == "UDZO":
-            cmd.extend(["-imagekey", f"zlib-level={str(zlib_level)}"])
+            cmd.extend(["-imagekey", f"zlib-level={zlib_level}"])
         if self.env.get("dmg_megabytes"):
             cmd.extend(["-megabytes", str(self.env["dmg_megabytes"])])
         cmd.extend(["-srcfolder", self.env["dmg_root"], self.env["dmg_path"]])

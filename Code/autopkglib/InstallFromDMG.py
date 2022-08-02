@@ -68,13 +68,12 @@ class InstallFromDMG(DmgMounter):
         if "install_from_dmg_summary_result" in self.env:
             del self.env["install_from_dmg_summary_result"]
 
-        if "download_changed" in self.env:
-            if not self.env["download_changed"]:
-                # URLDownloader did not download something new,
-                # so skip the install
-                self.output("Skipping installation: no new download.")
-                self.env["install_result"] = "SKIPPED"
-                return
+        if "download_changed" in self.env and not self.env["download_changed"]:
+            # URLDownloader did not download something new,
+            # so skip the install
+            self.output("Skipping installation: no new download.")
+            self.env["install_result"] = "SKIPPED"
+            return
         try:
             mount_point = self.mount(self.env["dmg_path"])
 

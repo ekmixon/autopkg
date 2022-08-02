@@ -121,12 +121,12 @@ class Versioner(DmgMounter):
         root_names: List[zipfile.ZipInfo] = list(
             filter(zipfile.ZipInfo.is_dir, _zip_listdir(archive, ""))
         )
-        if len(root_names) == 0:
+        if not root_names:
             self.output(f"Zip archive '{archive_path}' is empty.")
             return None
         if not skip_single_root_dir:
             return deserializer(archive.open(inner_path))
-        if skip_single_root_dir and len(root_names) > 1:
+        if len(root_names) > 1:
             raise ProcessorError(
                 f"Zip archive '{archive_path}' has more than one directory at "
                 f"root: {root_names} and skip_single_root_directory was set."

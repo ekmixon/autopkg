@@ -135,8 +135,7 @@ class SparkleUpdateInfoProvider(URLGetter):
         dictionary of header-name/value mappings."""
 
         curl_cmd = self.prepare_curl_cmd(url, headers)
-        content = self.download_with_curl(curl_cmd)
-        return content
+        return self.download_with_curl(curl_cmd)
 
     def get_feed_data(self, url):
         """Downloads raw feed XML"""
@@ -144,12 +143,11 @@ class SparkleUpdateInfoProvider(URLGetter):
         # query string
         if "appcast_query_pairs" in self.env:
             queries = self.env["appcast_query_pairs"]
-            new_query = urlencode([(k, v) for (k, v) in queries.items()])
+            new_query = urlencode(list(queries.items()))
             scheme, netloc, path, _, frag = urlsplit(url)
             url = urlunsplit((scheme, netloc, path, new_query, frag))
 
-        data = self.fetch_content(url, headers=self.env.get("appcast_request_headers"))
-        return data
+        return self.fetch_content(url, headers=self.env.get("appcast_request_headers"))
 
     def build_url(self, enclosure):
         """URL-quote the path component to handle spaces, etc.
@@ -160,9 +158,9 @@ class SparkleUpdateInfoProvider(URLGetter):
             encoded_path = quote(url_bits.path)
         else:
             encoded_path = url_bits.path
-        built_url = url_bits.scheme + "://" + url_bits.netloc + encoded_path
+        built_url = f"{url_bits.scheme}://{url_bits.netloc}{encoded_path}"
         if url_bits.query:
-            built_url += "?" + url_bits.query
+            built_url += f"?{url_bits.query}"
         return built_url
 
     def determine_version(self, enclosure, url):
@@ -219,8 +217,7 @@ class SparkleUpdateInfoProvider(URLGetter):
         for item_elem in items:
             enclosure = item_elem.find("enclosure")
             if enclosure is not None:
-                item = {}
-                item["url"] = self.build_url(enclosure)
+                item = {"url": self.build_url(enclosure)}
                 item["version"] = self.determine_version(enclosure, item["url"])
 
                 human_version = enclosure.get(f"{{{self.xmlns}}}shortVersionString")
@@ -247,8 +244,9 @@ class SparkleUpdateInfoProvider(URLGetter):
         """Handles any keys we may have defined"""
 
         pkginfo = {}
-        sparkle_pkginfo_keys = self.env.get("pkginfo_keys_to_copy_from_sparkle_feed")
-        if sparkle_pkginfo_keys:
+        if sparkle_pkginfo_keys := self.env.get(
+            "pkginfo_keys_to_copy_from_sparkle_feed"
+        ):
             for k in sparkle_pkginfo_keys:
                 if k not in SUPPORTED_ADDITIONAL_PKGINFO_KEYS:
                     self.output(
@@ -267,10 +265,12 @@ class SparkleUpdateInfoProvider(URLGetter):
                     description = ""
                 pkginfo["description"] = description.decode("UTF-8")
 
-            if "minimum_os_version" in sparkle_pkginfo_keys:
-                if latest.get("minimum_os_version") is not None:
-                    pkginfo["minimum_os_version"] = latest.get("minimum_os_version")
-            for copied_key in pkginfo.keys():
+            if (
+                "minimum_os_version" in sparkle_pkginfo_keys
+                and latest.get("minimum_os_version") is not None
+            ):
+                pkginfo["minimum_os_version"] = latest.get("minimum_os_version")
+            for copied_key in pkginfo:
                 self.output(
                     f"Copied key {copied_key} from Sparkle feed to additional "
                     "pkginfo."

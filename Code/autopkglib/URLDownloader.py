@@ -118,7 +118,7 @@ class URLDownloader(URLGetter):
 
     def prepare_base_curl_cmd(self):
         """Assemble base curl command and return it."""
-        curl_cmd = [
+        return [
             self.curl_binary(),
             "--silent",
             "--show-error",
@@ -131,8 +131,6 @@ class URLDownloader(URLGetter):
             "--url",
             self.env["url"],
         ]
-
-        return curl_cmd
 
     def clear_zero_file(self, pathname):
         """If file already exists and the size is 0, discard it to download again."""

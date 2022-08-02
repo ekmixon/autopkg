@@ -198,10 +198,13 @@ class PkgCreator(Processor):
 
         # Convert relative paths to absolute.
         for key, value in list(request.items()):
-            if key in ("pkgroot", "pkgdir", "infofile", "resources", "scripts"):
-                if value and not value.startswith("/"):
-                    # search for it
-                    request[key] = self.find_path_for_relpath(value)
+            if (
+                key in ("pkgroot", "pkgdir", "infofile", "resources", "scripts")
+                and value
+                and not value.startswith("/")
+            ):
+                # search for it
+                request[key] = self.find_path_for_relpath(value)
 
         # Check for an existing flat package in the output dir and compare its
         # identifier and version to the one we're going to build.

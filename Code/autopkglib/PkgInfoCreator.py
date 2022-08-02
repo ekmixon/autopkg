@@ -73,17 +73,6 @@ class PkgInfoCreator(Processor):
 
     def convert_bundle_info_to_flat(self, info):
         """Converts pkg info from bundle format to flat format"""
-        # Since we now only support flat packages, we might be able to
-        # get rid of this in the near future, but all existing recipes
-        # would need to convert to only flat-style Resources/data
-        conversion_map = {
-            "None": "none",
-            "RecommendRestart": "restart",
-            "RequireLogout": "logout",
-            "RequireRestart": "restart",
-            "RequireShutdown": "shutdown",
-        }
-
         pkg_info = ElementTree.Element("pkg-info")
         pkg_info.set("format-version", "2")
         for bundle, flat in (
@@ -99,6 +88,17 @@ class PkgInfoCreator(Processor):
             else:
                 pkg_info.set("auth", "none")
         if "IFPkgFlagRestartAction" in info:
+            # Since we now only support flat packages, we might be able to
+            # get rid of this in the near future, but all existing recipes
+            # would need to convert to only flat-style Resources/data
+            conversion_map = {
+                "None": "none",
+                "RecommendRestart": "restart",
+                "RequireLogout": "logout",
+                "RequireRestart": "restart",
+                "RequireShutdown": "shutdown",
+            }
+
             pkg_info.set(
                 "postinstall-action", conversion_map[info["IFPkgFlagRestartAction"]]
             )

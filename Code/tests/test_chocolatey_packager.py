@@ -29,12 +29,9 @@ VarDict = Dict[str, Any]
 
 
 def get_mocked_writes(mock: unittest.mock.MagicMock) -> str:
-    res = ""
-    for name, args, _ in mock.mock_calls:
-        if name != "().write":
-            continue
-        res += args[0]
-    return res
+    return "".join(
+        args[0] for name, args, _ in mock.mock_calls if name == "().write"
+    )
 
 
 def check_for_choco() -> bool:

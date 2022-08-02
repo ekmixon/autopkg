@@ -43,10 +43,9 @@ class MunkiSetDefaultCatalog(Processor):
     def main(self):
         if "pkginfo" not in self.env:
             self.env["pkginfo"] = {}
-        default_catalog = CFPreferencesCopyAppValue(
+        if default_catalog := CFPreferencesCopyAppValue(
             "default_catalog", "com.googlecode.munki.munkiimport"
-        )
-        if default_catalog:
+        ):
             self.env["pkginfo"]["catalogs"] = [default_catalog]
             self.output(f"Updated target catalogs into pkginfo with {default_catalog}")
         else:

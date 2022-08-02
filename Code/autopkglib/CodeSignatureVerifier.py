@@ -134,25 +134,16 @@ class CodeSignatureVerifier(DmgMounter):
             elif strict_verification:
                 self.output("Strict verification enabled...")
                 process.append("--strict")
-            elif not strict_verification:
+            else:
                 self.output("Strict verification disabled...")
                 process.append("--no-strict")
-            else:
-                self.output(
-                    "Strict verification value type unknown. Using codesign defaults..."
-                )
-
         # Add additional arguments (if any).
-        for argument in codesign_additional_arguments:
-            process.append(argument)
-
+        process.extend(iter(codesign_additional_arguments))
         # Add the requirement string
         if test_requirement:
             if self.env.get("CODE_SIGNATURE_VERIFICATION_DEBUG"):
                 self.output(f"Requirement: {test_requirement}")
-            process.append("--test-requirement")
-            process.append(f"={test_requirement}")
-
+            process.extend(("--test-requirement", f"={test_requirement}"))
         process.append(path)
 
         if self.env.get("CODE_SIGNATURE_VERIFICATION_DEBUG"):
@@ -200,9 +191,10 @@ class CodeSignatureVerifier(DmgMounter):
                 self.output(line)
 
         # Parse the output for certificate authority names
-        authority_name_chain = []
-        for match in re.finditer(RE_AUTHORITY_PKGUTIL, output):
-            authority_name_chain.append(match.group("authority"))
+        authority_name_chain = [
+            match.group("authority")
+            for match in re.finditer(RE_AUTHORITY_PKGUTIL, output)
+        ]
 
         # Return a tuple with boolean status and
         # a list with certificate authority names

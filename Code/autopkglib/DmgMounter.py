@@ -31,13 +31,13 @@ class DmgMounter(Processor):
 
     def __init__(self, data=None, infile=None, outfile=None):
         super().__init__(data, infile, outfile)
-        self.mounts = dict()
+        self.mounts = {}
 
     def parsePathForDMG(self, pathname):
         """Helper method for working with paths that reference something
         inside a disk image"""
         for extension in self.DMG_EXTENSIONS:
-            (dmg_path, dmg, dmg_source_path) = pathname.partition(extension + "/")
+            (dmg_path, dmg, dmg_source_path) = pathname.partition(f"{extension}/")
             if dmg:
                 dmg_path += extension
                 return dmg_path, dmg, dmg_source_path
@@ -90,8 +90,7 @@ class DmgMounter(Processor):
         if pliststr:
             try:
                 plist = plistlib.loads(pliststr.encode())
-                properties = plist.get("Properties")
-                if properties:
+                if properties := plist.get("Properties"):
                     has_sla = properties.get("Software License Agreement", False)
             except Exception:
                 pass
@@ -104,10 +103,7 @@ class DmgMounter(Processor):
         if pathname in self.mounts:
             raise ProcessorError(f"{pathname} is already mounted")
 
-        stdin = ""
-        if self.dmg_has_sla(pathname):
-            stdin = "Y\n"
-
+        stdin = "Y\n" if self.dmg_has_sla(pathname) else ""
         # Call hdiutil.
         try:
             proc = subprocess.Popen(
